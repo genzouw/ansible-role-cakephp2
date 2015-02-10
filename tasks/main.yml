@@ -1,0 +1,62 @@
+---
+
+- shell: "rm -rf {{ cakephp2_app_root }}"
+  args:
+    creates: "{{ cakephp2_app_root }}/composer.json"
+    removes: "{{ cakephp2_app_root }}"
+
+- shell: "/usr/local/bin/composer create-project 'cakephp/cakephp' {{ cakephp2_app_root|basename }}"
+  args:
+    chdir: "{{ cakephp2_app_root|dirname }}"
+    creates: "{{ cakephp2_app_root }}/composer.json"
+
+# - shell: "composer require 'cakephp/cakephp:>=2.6.*'"
+  # args:
+    # chdir: "{{ cakephp1_app_root }}"
+    # creates:  "{{ cakephp2_app_root }}/composer.json"
+
+# - composer: 
+    # working_dir: "{{ cakephp2_app_root }}"
+    # command: install
+
+- file:
+    path: "{{ cakephp2_app_root }}"
+    owner: "{{ cakephp2_operator }}"
+    group: apache
+    state: directory
+    recurse: yes
+
+- file:
+    path: "{{ cakephp2_app_root }}/tmp"
+    mode: u+rwx,g+rws
+    state: directory
+    recurse: yes
+
+- mysql_db: login_host=localhost name={{ cakephp2_dbname }} state=present encoding=utf8
+- mysql_user: login_host=localhost user={{ cakephp2_dbuser }} password={{ cakephp2_dbpass }} priv={{ cakephp2_dbname }}.*:all
+
+- template:
+    src: database.php.j2
+    dest: "{{ cakephp2_app_root }}/app/Config/database.php"
+    owner: "{{ cakephp2_operator }}"
+    group: apache
+    mode: u+rw,g+rw
+
+- shell: /usr/local/bin/composer require "cakephp/debug_kit:2.2.*"
+  args:
+    chdir: "{{ cakephp2_app_root }}/app"
+  sudo_user: "{{ cakephp2_operator }}"
+
+- composer:
+    working_dir: "{{ cakephp2_app_root }}/app"
+    command: install
+  sudo_user: "{{ cakephp2_operator }}"
+
+- shell: ./Console/cake schema create -y
+  args:
+    chdir: "{{ cakephp2_app_root }}/app"
+
+- shell: ./Console/cake AclExtras.AclExtras aco_sync
+  args:
+    chdir: "{{ cakephp2_app_root }}/app"
+

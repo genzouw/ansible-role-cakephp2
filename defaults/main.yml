@@ -1,0 +1,7 @@
+---
+cakephp2_dbhost: localhost
+cakephp2_dbname: "cakephp2_db"
+cakephp2_dbuser: "cakephp2_user"
+cakephp2_dbpass: "cakephp2_user"
+cakephp2_operator: "apache"
+
